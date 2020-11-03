@@ -175,7 +175,7 @@ while True:
         try:
             ma.run()
             d.uploadAll(config['dav']['save_path'])
-            ma.move_to_trash_before_date(0)
+            ma.move_to_trash_before_date(7)
         except Exception as e:
             print(e)
             ma = Mailer(config['email']['imap_host'], config['email']['imap_user'], config['email']['imap_password'])
