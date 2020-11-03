@@ -3,7 +3,7 @@
 # - https://stackoverflow.com/questions/6225763/downloading-multiple-attachments-using-imaplib
 # - https://stackoverflow.com/questions/43857002/script-in-python-to-download-email-attachments
 
-import imaplib, datetime, random, email, os, configparser, time
+import imaplib, datetime, random, email, os, configparser, time, requests
 from webdav3.client import Client
 from os import listdir
 from os.path import isfile, join
@@ -54,7 +54,7 @@ class Mailer:
         self.m.close()
         self.m.logout()
 
-    def downloaAttachmentsInEmail(self, emailid):
+    def downloadAttachmentsInEmail(self, emailid):
         """Downloads the attachments to a local disk
 
         Args:
@@ -63,11 +63,23 @@ class Mailer:
         resp, data = self.m.fetch(emailid, "(BODY.PEEK[])")
         email_body = data[0][1]
         mail = email.message_from_bytes(email_body)
+        filenames = ""
+
         if mail.get_content_maintype() != 'multipart':
             return
         for part in mail.walk():
             if part.get_content_maintype() != 'multipart' and part.get('Content-Disposition') is not None:
                 open("attachments" + '/' + part.get_filename(), 'wb').write(part.get_payload(decode=True))
+                filenames+=part.get_filename()+"<br>"
+
+        if config['pushover']['use'] == "yes":
+            msg="New files uploaded via Mail from <br>"
+            msg+=str(mail["from"])
+            msg+="<br><br>"
+            msg+=filenames
+
+            self.sendToPushover(msg, 0, config['pushover']['token'], config['pushover']['user'])
+
 
     def run(self):
         """Runner for the attachment download, call this function
@@ -85,7 +97,7 @@ class Mailer:
         msgs = msgs[0].split()
         for emailid in msgs:
             response, data = self.m.store(emailid, '+FLAGS','\\Seen')
-            self.downloaAttachmentsInEmail(emailid)
+            self.downloadAttachmentsInEmail(emailid)
         self.stop()
 
     def move_to_trash_before_date(self,days_before):
@@ -110,6 +122,26 @@ class Mailer:
             response, data = self.m.store(emailid, '+FLAGS','\\Deleted')
         self.m.expunge()
         self.stop()
+
+    def sendToPushover(self, message, cnt, token, user):
+        url="https://api.pushover.net/1/messages.json" #url to push to
+        cnt2 = 0 
+        if len(message) > 1000:
+            length = len(message)
+            message2 = message[0:length-1000]
+            cnt2 = 1
+            message = message[length-1000:length]
+            title2 = title
+            title = '+ ' + str(title)
+        payload = {'token': token, 'user': user, 'message': message, 'html': 1, 'title': "New file uploaded", 'priority': 0}
+        try:
+            response = requests.post(url, data=payload)
+        except:
+            return False
+
+        if cnt2 > 0:
+            cnt = 1
+            self.sendToPushover(message2, title2, '', '', 0, cnt)
 
 
 class Dav:
@@ -162,6 +194,8 @@ class Dav:
                 os.remove("attachments/"+f)
             except Exception as e:
                 print(e)
+
+
 
 
 ma = Mailer(config['email']['imap_host'], config['email']['imap_user'], config['email']['imap_password'])
