@@ -60,13 +60,14 @@ class Mailer:
         Args:
             emailid (int): received mail identifier one on a time
         """
+        print(f"Downloading mail attachment")
         resp, data = self.m.fetch(emailid, "(BODY.PEEK[])")
         email_body = data[0][1]
         mail = email.message_from_bytes(email_body)
         filenames = ""
 
         if mail.get_content_maintype() != 'multipart':
-            return
+            return True
         for part in mail.walk():
             if part.get_content_maintype() != 'multipart' and part.get('Content-Disposition') is not None:
                 open("attachments" + '/' + part.get_filename(), 'wb').write(part.get_payload(decode=True))
@@ -79,6 +80,8 @@ class Mailer:
             msg+=filenames
 
             self.sendToPushover(msg, 0, config['pushover']['token'], config['pushover']['user'])
+
+        return True
 
 
     def run(self):
@@ -96,8 +99,8 @@ class Mailer:
         typ, msgs = self.m.search(None, 'UnSeen')
         msgs = msgs[0].split()
         for emailid in msgs:
-            response, data = self.m.store(emailid, '+FLAGS','\\Seen')
-            self.downloadAttachmentsInEmail(emailid)
+            if self.downloadAttachmentsInEmail(emailid):
+                response, data = self.m.store(emailid, '+FLAGS','\\Seen')
         self.stop()
 
     def move_to_trash_before_date(self,days_before):
