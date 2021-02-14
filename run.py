@@ -181,7 +181,7 @@ class Dav:
             except Exception as e:
                 print(e)
                 return False
-        if not date in self.client.list(dir+"/"+year) and len(f) > 0:
+        if not date in self.client.list(dir+"/"+year) and len(files) > 0:
             try:
                 self.client.mkdir(dir+"/"+year+"/"+date)
             except Exception as e:
