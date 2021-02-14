@@ -141,7 +141,7 @@ class Mailer:
 
         if cnt2 > 0:
             cnt = 1
-            self.sendToPushover(message2, title2, '', '', 0, cnt)
+            self.sendToPushover(message2, cnt, config['pushover']['token'], config['pushover']['user'])
 
 
 class Dav:
