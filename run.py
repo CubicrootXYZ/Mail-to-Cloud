@@ -156,7 +156,7 @@ class Mailer:
         try:
             response = requests.post(url, data=json.dumps(payload), headers={'Content-Type': 'application/json'})
             print("Response from pushbits: " + response.text)
-        except:
+        except Exception as e :
             print(f"Failed sending to pushbits with: {e}")
             return False
 
