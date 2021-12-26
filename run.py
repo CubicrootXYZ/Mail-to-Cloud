@@ -143,7 +143,8 @@ class Mailer:
         payload = {'token': token, 'user': user, 'message': message, 'html': 1, 'title': title, 'priority': 0}
         try:
             response = requests.post(url, data=payload)
-        except:
+        except Exception as e:
+            print(f"Failed sending to pushover with: {e}")
             return False
 
         if cnt2 > 0:
@@ -151,11 +152,12 @@ class Mailer:
             self.sendToPushover(message2, cnt, config['pushover']['token'], config['pushover']['user'])
 
     def sendToPushbits(self, url, message):
-        payload = {'message': message, 'title': "New file upload"}
+        payload = {'message': message, 'title': "New file upload", "extras": {"client::display": {"contentType": "text/html"}}}
         try:
             response = requests.post(url, data=json.dumps(payload), headers={'Content-Type': 'application/json'})
             print("Response from pushbits: " + response.text)
         except:
+            print(f"Failed sending to pushbits with: {e}")
             return False
 
 
