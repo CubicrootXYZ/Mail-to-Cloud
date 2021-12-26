@@ -3,7 +3,7 @@
 # - https://stackoverflow.com/questions/6225763/downloading-multiple-attachments-using-imaplib
 # - https://stackoverflow.com/questions/43857002/script-in-python-to-download-email-attachments
 
-import imaplib, datetime, random, email, os, configparser, time, requests
+import imaplib, datetime, random, email, os, configparser, time, requests, json
 from webdav3.client import Client
 from os import listdir
 from os.path import isfile, join
@@ -153,10 +153,10 @@ class Mailer:
     def sendToPushbits(self, url, message):
         payload = {'message': message, 'title': "New file upload"}
         try:
-            response = requests.post(url, data=payload)
+            response = requests.post(url, data=json.dumps(payload), headers={'Content-Type': 'application/json'})
+            print("Response from pushbits: " + response.text)
         except:
             return False
-        pass
 
 
 class Dav:
