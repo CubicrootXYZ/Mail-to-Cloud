@@ -73,13 +73,16 @@ class Mailer:
                 open("attachments" + '/' + part.get_filename(), 'wb').write(part.get_payload(decode=True))
                 filenames+=part.get_filename()+"<br>"
 
-        if config['pushover']['use'] == "yes":
-            msg="New files uploaded via Mail from <br>"
-            msg+=str(mail["from"])
-            msg+="<br><br>"
-            msg+=filenames
+        msg="New files uploaded via Mail from <br>"
+        msg+=str(mail["from"])
+        msg+="<br><br>"
+        msg+=filenames
 
+        if config['pushover']['use'] == "yes":
             self.sendToPushover(msg, 0, config['pushover']['token'], config['pushover']['user'])
+
+        if config['pushbits']['use'] == 'yes':
+            self.sendToPushbits(config['pushbits']['url'], msg)
 
         return True
 
@@ -129,14 +132,15 @@ class Mailer:
     def sendToPushover(self, message, cnt, token, user):
         url="https://api.pushover.net/1/messages.json" #url to push to
         cnt2 = 0 
+        title = "New file uploaded"
+        if cnt > 0:
+            title = "+ " + title
         if len(message) > 1000:
             length = len(message)
             message2 = message[0:length-1000]
             cnt2 = 1
             message = message[length-1000:length]
-            title2 = title
-            title = '+ ' + str(title)
-        payload = {'token': token, 'user': user, 'message': message, 'html': 1, 'title': "New file uploaded", 'priority': 0}
+        payload = {'token': token, 'user': user, 'message': message, 'html': 1, 'title': title, 'priority': 0}
         try:
             response = requests.post(url, data=payload)
         except:
@@ -145,6 +149,14 @@ class Mailer:
         if cnt2 > 0:
             cnt = 1
             self.sendToPushover(message2, cnt, config['pushover']['token'], config['pushover']['user'])
+
+    def sendToPushbits(self, url, message):
+        payload = {'message': message, 'title': "New file upload"}
+        try:
+            response = requests.post(url, data=payload)
+        except:
+            return False
+        pass
 
 
 class Dav:
