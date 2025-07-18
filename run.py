@@ -98,12 +98,13 @@ class Mailer:
         except:
             return False
         self.m.select()
-        self.m.select("Inbox")
-        typ, msgs = self.m.search(None, 'UnSeen')
+        self.m.select("Inbox/Upload-Attachments")
+        typ, msgs = self.m.search(None, 'UNANSWERED')
         msgs = msgs[0].split()
         for emailid in msgs:
             if self.downloadAttachmentsInEmail(emailid):
-                response, data = self.m.store(emailid, '+FLAGS','\\Seen')
+                response, data = self.m.store(emailid, '+FLAGS','\\Answered')
+                print(f"downloaded attachment for email {str(emailid)}")
         self.stop()
 
     def move_to_trash_before_date(self,days_before):
@@ -115,14 +116,16 @@ class Mailer:
         Returns:
             False: if there is an exception
         """
+        if days_before < 0:
+            return True
         try:
             self.start()
         except:
             return False
         self.m.select()
-        self.m.select("Inbox")
+        self.m.select("Inbox/Upload-Attachments")
         before_date = (datetime.date.today() - datetime.timedelta(days_before)).strftime("%d-%b-%Y")  # date string, 04-Jan-2013
-        typ, data = self.m.search(None, '(SINCE {0})'.format(before_date))  # search pointer for msgs before before_date
+        typ, data = self.m.search(None, '(BEFORE {0}) ANSWERED'.format(before_date))  # search pointer for msgs before before_date
         msgs = data[0].split()
         for emailid in msgs:
             response, data = self.m.store(emailid, '+FLAGS','\\Deleted')
@@ -192,25 +195,13 @@ class Dav:
         files = [f for f in listdir("attachments") if isfile(join("attachments", f))]
         year = datetime.datetime.now().strftime("%Y")
         date = datetime.datetime.now().strftime("%m-%d")
-        if not year in self.client.list(dir):
-            try:
-                self.client.mkdir(dir+"/"+year)
-            except Exception as e:
-                print(e)
-                return False
-        if not date in self.client.list(dir+"/"+year) and len(files) > 0:
-            try:
-                self.client.mkdir(dir+"/"+year+"/"+date)
-            except Exception as e:
-                print(e)
-                return False
 
         for f in files:
             try:
-                self.client.upload_sync(remote_path=dir+"/"+year+"/"+date+"/"+str(random.randint(10000,100000))+"_"+f, local_path="attachments/"+f)
+                self.client.upload_sync(remote_path=dir+"/"+str(random.randint(10000,100000))+"_"+f, local_path="attachments/"+f)
                 os.remove("attachments/"+f)
             except Exception as e:
-                print(e)
+                print(f"failed uploading file: {e}")
 
 
 
@@ -226,9 +217,9 @@ while True:
         try:
             ma.run()
             d.uploadAll(config['dav']['save_path'])
-            ma.move_to_trash_before_date(7)
+            ma.move_to_trash_before_date(int(config['email']['keep_for_days']))
         except Exception as e:
-            print(e)
+            print(f"loop failed with {e}")
             ma = Mailer(config['email']['imap_host'], config['email']['imap_user'], config['email']['imap_password'])
             d = Dav(config['dav']['host'], config['dav']['user'], config['dav']['password'])
         time.sleep(120)
